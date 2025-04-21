@@ -1,50 +1,70 @@
-
 import streamlit as st
+import heapq
 import networkx as nx
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Shortest Path Visualizer", layout="centered")
+# Step 1: Define the graph structure
+graph = {
+    'Origin': {'A': 40, 'B': 60, 'C': 50},
+    'A': {'B': 10, 'D': 70},
+    'B': {'C': 20, 'D': 55, 'E': 40},
+    'C': {'D': 50},
+    'D': {'E': 10, 'Destination': 60},
+    'E': {'Destination': 80},
+    'Destination': {}
+}
 
-st.title("🚗 最短路径可视化 - 城镇导航")
+# Step 2: Dijkstra's algorithm implementation
+def dijkstra(graph, start, end):
+    queue = [(0, start, [])]
+    visited = set()
+    while queue:
+        (cost, node, path) = heapq.heappop(queue)
+        if node in visited:
+            continue
+        path = path + [node]
+        if node == end:
+            return cost, path
+        visited.add(node)
+        for neighbor, weight in graph[node].items():
+            if neighbor not in visited:
+                heapq.heappush(queue, (cost + weight, neighbor, path))
+    return float("inf"), []
 
-# 定义图
+# Step 3: Streamlit interface
+st.title("Shortest Path Finder: Dijkstra’s Algorithm")
+
+st.write("Welcome! This tool visualizes shortest paths on a graph using Dijkstra’s algorithm.")
+
+start = st.selectbox("Choose a starting town", list(graph.keys()))
+end = st.selectbox("Choose a destination town", list(graph.keys()))
+
+if st.button("Find Shortest Path"):
+    if start == end:
+        st.warning("Start and destination are the same.")
+    else:
+        cost, path = dijkstra(graph, start, end)
+        if cost < float("inf"):
+            st.success(f"Shortest path: {' ➝ '.join(path)} (Total distance: {cost} miles)")
+        else:
+            st.error("No valid route found between selected towns.")
+
+# Step 4: Graph visualization
+st.subheader("Graph Visualization of Town Network")
+
+# Convert to NetworkX graph
 G = nx.DiGraph()
+for u in graph:
+    for v, w in graph[u].items():
+        G.add_edge(u, v, weight=w)
 
-edges = [
-    ("Origin", "A", 40),
-    ("Origin", "B", 60),
-    ("Origin", "C", 50),
-    ("A", "B", 10),
-    ("A", "D", 70),
-    ("B", "C", 20),
-    ("B", "D", 55),
-    ("B", "E", 40),
-    ("C", "E", 50),
-    ("C", "Destination", 80),
-    ("D", "E", 10),
-    ("D", "Destination", 60),
-    ("E", "Destination", 60)
-]
-
-G.add_weighted_edges_from(edges)
-
-# 最短路径计算
-shortest_path = nx.dijkstra_path(G, source="Origin", target="Destination")
-shortest_distance = nx.dijkstra_path_length(G, source="Origin", target="Destination")
-
-# 展示最短路径
-st.markdown(f"### ✅ 最短路径: {' → '.join(shortest_path)}")
-st.markdown(f"### 📏 最短距离: {shortest_distance} miles")
-
-# 可视化图形
-pos = nx.spring_layout(G, seed=42)
-
+# Draw the graph
+pos = nx.spring_layout(G, seed=42)  # Stable layout
 plt.figure(figsize=(10, 6))
-nx.draw(G, pos, with_labels=True, node_color="skyblue", node_size=1200, font_size=14)
-nx.draw_networkx_edge_labels(G, pos, edge_labels={(u, v): d['weight'] for u, v, d in G.edges(data=True)})
+nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1800, font_size=12, arrows=True)
+edge_labels = nx.get_edge_attributes(G, 'weight')
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+plt.title("Town Graph - Distances as Edge Weights")
 
-# 高亮最短路径
-path_edges = list(zip(shortest_path, shortest_path[1:]))
-nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color="red", width=3)
-
-st.pyplot(plt)
+# Display the plot in Streamlit
+st.pyplot(plt.gcf())
