@@ -1,3 +1,4 @@
+
 import streamlit as st
 import heapq
 import networkx as nx
@@ -8,9 +9,9 @@ graph = {
     'Origin': {'A': 40, 'B': 60, 'C': 50},
     'A': {'B': 10, 'D': 70},
     'B': {'C': 20, 'D': 55, 'E': 40},
-    'C': {'D': 50},
+    'C': {'D': 50, 'Destination': 80},
     'D': {'E': 10, 'Destination': 60},
-    'E': {'Destination': 80},
+    'E': {'Destination': 60},
     'Destination': {}
 }
 
@@ -32,25 +33,28 @@ def dijkstra(graph, start, end):
     return float("inf"), []
 
 # Step 3: Streamlit interface
-st.title("Shortest Path Finder: Dijkstra’s Algorithm")
+st.title("🚗 Shortest Path Finder: Dijkstra’s Algorithm")
 
-st.write("Welcome! This tool visualizes shortest paths on a graph using Dijkstra’s algorithm.")
+st.write("This tool visualizes shortest paths on a town network using Dijkstra’s algorithm.")
 
-start = st.selectbox("Choose a starting town", list(graph.keys()))
-end = st.selectbox("Choose a destination town", list(graph.keys()))
+start = st.selectbox("🏁 Choose a starting town", list(graph.keys()), index=0)
+end = st.selectbox("🏁 Choose a destination town", list(graph.keys()), index=len(graph)-1)
 
-if st.button("Find Shortest Path"):
+highlight_path = []
+
+if st.button("🔍 Find Shortest Path"):
     if start == end:
         st.warning("Start and destination are the same.")
     else:
         cost, path = dijkstra(graph, start, end)
         if cost < float("inf"):
             st.success(f"Shortest path: {' ➝ '.join(path)} (Total distance: {cost} miles)")
+            highlight_path = list(zip(path, path[1:]))
         else:
             st.error("No valid route found between selected towns.")
 
 # Step 4: Graph visualization
-st.subheader("Graph Visualization of Town Network")
+st.subheader("📊 Town Network Graph with Distances")
 
 # Convert to NetworkX graph
 G = nx.DiGraph()
@@ -59,12 +63,15 @@ for u in graph:
         G.add_edge(u, v, weight=w)
 
 # Draw the graph
-pos = nx.spring_layout(G, seed=42)  # Stable layout
+pos = nx.kamada_kawai_layout(G)  # Better spacing
 plt.figure(figsize=(10, 6))
-nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=1800, font_size=12, arrows=True)
+nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=2000, font_size=12, arrows=True)
 edge_labels = nx.get_edge_attributes(G, 'weight')
 nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
-plt.title("Town Graph - Distances as Edge Weights")
 
-# Display the plot in Streamlit
+# Highlight shortest path edges in red
+if highlight_path:
+    nx.draw_networkx_edges(G, pos, edgelist=highlight_path, edge_color="red", width=3)
+
+plt.title("Town Graph - Distances as Edge Weights", fontsize=14)
 st.pyplot(plt.gcf())
